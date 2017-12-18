@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+        <script src="../js/webrtc.js"></script>
+    </head>
+<body>
+<input type="text" id="room-id" autocorrect=off autocapitalize=off size=20>
+<br/>
+
+<button id="join-room">Join Room</button>
+
+<script>
+
+    document.getElementById('join-room').onclick = function() {
+            var eventList = document.querySelector('ul');
+
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+              if(this.readyState == 4 && this.status == 200){
+
+                  var newElement = document.createElement("li");
+                  newElement.textContent = "message: " + this.responseText;
+                  eventList.appendChild(newElement);
+
+              }
+            };
+            var userName = document.getElementById('room-id').value;
+            var data = new FormData();
+            data.append('id', userName);
+
+
+            xhr.open("POST","/joinxhr",true);
+            xhr.send(data);
+        };
+</script>
+
+
+
+</body>
+</html>
