@@ -32,49 +32,49 @@ def send(channel_name, massage_type):
 
 
 
-@app.route('/')
-def index():
-    return render_template("index.html")
-@app.route('/webrtc')
-def webrtc():
-    return render_template("sec.html")
+# @app.route('/')
+# def index():
+#     return render_template("index.html")
+# @app.route('/webrtc')
+# def webrtc():
+#     return render_template("sec.html")
+#
+# @app.route('/hello')
+# def publish_hello():
+#     sse.publish({"message": "Hello!"}, type='greeting')
+#     return "Message sent!"
 
-@app.route('/hello')
-def publish_hello():
-    sse.publish({"message": "Hello!"}, type='greeting')
-    return "Message sent!"
+# @app.route('/xhr',  methods=['GET', 'POST'])
+# def xhr():
+#     data = request.form
+#     room_id = request.form.get('chat_id')
+#     tab_uuid = request.form.get('uuid')
+#     if r.exists(room_id):
+#         return json.dumps({'success': False}), 400, {'ContentType': 'application/json'}
+#     r.set(room_id,tab_uuid)
+#
+#
+#
+#
+#     return json.dumps({'success': True}), 200, {'ContentType': 'application/json'}
 
-@app.route('/xhr',  methods=['GET', 'POST'])
-def xhr():
-    data = request.form
-    room_id = request.form.get('chat_id')
-    tab_uuid = request.form.get('uuid')
-    if r.exists(room_id):
-        return json.dumps({'success': False}), 400, {'ContentType': 'application/json'}
-    r.set(room_id,tab_uuid)
-
-
-
-
-    return json.dumps({'success': True}), 200, {'ContentType': 'application/json'}
-
-@app.route('/joinxhr',  methods=['GET', 'POST'])
-def joinxhr():
-    data = request.form
-    room_id = request.form.get('chat_id')
-    if r.exists(room_id):
-        uuid= r.get(room_id)
-        # sse.publish({"message": "one peer are calling","room_id" : room_id}, type=uuid)
-        return json.dumps({'success': True}), 200, {'ContentType': 'application/json'}
-
-
-    # r.set(room_id,1)
-
-
-
-
-    return json.dumps({'success': False}), 400, {'ContentType': 'application/json'}
-
-@app.route('/join')
-def join():
-    return render_template("join.html")
+# @app.route('/joinxhr',  methods=['GET', 'POST'])
+# def joinxhr():
+#     data = request.form
+#     room_id = request.form.get('chat_id')
+#     if r.exists(room_id):
+#         uuid= r.get(room_id)
+#         # sse.publish({"message": "one peer are calling","room_id" : room_id}, type=uuid)
+#         return json.dumps({'success': True}), 200, {'ContentType': 'application/json'}
+#
+#
+#     # r.set(room_id,1)
+#
+#
+#
+#
+#     return json.dumps({'success': False}), 400, {'ContentType': 'application/json'}
+#
+# @app.route('/join')
+# def join():
+#     return render_template("join.html")
