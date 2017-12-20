@@ -12,6 +12,21 @@ var peerConnectionConfig = {
     ]
 };
 
+var source = new EventSource("{{ url_for('sse.stream') }}");
+source.addEventListener('greeting', function(event) {
+    var data = JSON.parse(event.data);
+    if (data.room_id == chat_room_id){
+        var newElement = document.createElement("li");
+        newElement.textContent = "message: " + "one calling you";
+        eventList.appendChild(newElement);
+    }
+    }, false);
+
+source.addEventListener('error', function(event) {
+                alert("Failed to connect to event stream. Is Redis running?");
+            }, false);
+
+
 function pageReady() {
     uuid = uuid();
 

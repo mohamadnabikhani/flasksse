@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+        <script type="text/javascript" src="/js/webrtc.js"></script>
+    </head>
+
+    <body>
+        <video id="localVideo" autoplay  style="width:40%;"></video>
+        <video id="remoteVideo" autoplay style="width:40%;"></video>
+        <script>
+
+        </script>
+        <br />
+
+        <input type="button" id="start" onclick="start(true)" value="Start Video"></input>
+         <br/>
+        <input type="text" id="room-id" autocorrect=off autocapitalize=off size=20>
+        <button id="open-room" >Open Room</button>
+        <button id="join-room">Join Room</button>
+
+        <br/>
+        <ul>
+
+        </ul>
+        <script>
+
+            var chat_room_id;
+            var localVideo = document.getElementById('localVideo');
+            var remoteVideo = document.getElementById('remoteVideo');
+
+            var peerConnectionConfig = {
+                'iceServers': [
+                    {'urls': 'stun:stun.services.mozilla.com'},
+                    {'urls': 'stun:stun.l.google.com:19302'}
+                ]
+            };
+
+
+            function send_massage(massage, id, type) {
+                var xhr = new XMLHttpRequest();
+                var inp = "/channel/send/"+id+"/"+type;
+                xhr.open('POST', inp, true);
+               xhr.send(massage);
+            }
+            document.getElementById('open-room').onclick = function() {
+
+                chat_room_id = document.getElementById("room-id").value;
+                var peerConnection = new RTCPeerConnection(peerConnectionConfig);
+                peerConnection.onaddstream = gotRemoteStream;
+                peerConnection.onicecandidate = gotIceCandidate;
+
+                var constraints = {
+
+                    audio: true,
+                    video: {
+                      mandatory: {
+                        width: { min: 320 },
+                        height: { min: 180 }
+                      },
+                      optional: [
+                        { width: { max: 1280 }},
+                        { frameRate: 30 },
+                        { facingMode: "user" }
+                      ]
+                    }
+                };
+
+                if(navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia(constraints).then(getUserMediaSuccess).catch(errorHandler);
+                } else {
+                    alert('Your browser does not support getUserMedia API');
+
+                }
+
+                function getUserMediaSuccess(stream) {
+                    console.log("getUserMediaSuccess");
+                    localStream = stream;
+                    localVideo.src = window.URL.createObjectURL(stream);
+                    peerConnection.addStream(localStream);
+
+                }
+
+                function gotIceCandidate(event) {
+                    if(event.candidate != null) {
+                        send_massage(JSON.stringify({'ice': event.candidate}) , chat_room_id, 'ice2');
+                    }
+                }
+
+                function errorHandler(error) {
+                    console.log(error);
+                }
+
+                var source = new EventSource("/stream?channel="+chat_room_id);
+                source.addEventListener('request', gotRequest);
+
+                function gotRequest(event) {
+                    console.log("gotRequest");
+                    var data = JSON.parse(event.data);
+                    data =  JSON.parse(data.message);
+                    peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp)).then(function() {
+                        peerConnection.createAnswer().then(createdDescription).catch(errorHandler);
+                    }).catch(errorHandler);
+
+                }
+
+                source.addEventListener('ice1', gotIce);
+                function gotIce(event) {
+                    console.log("gotIce");
+                    var data = JSON.parse(event.data);
+                    data =  JSON.parse(data.message);
+                    peerConnection.addIceCandidate(new RTCIceCandidate(data.ice)).catch(errorHandler);
+                }
+
+                function createdDescription(description) {
+                    console.log("createdDescription")
+                    peerConnection.setLocalDescription(description).then(function() {
+                        send_massage(JSON.stringify({'sdp': peerConnection.localDescription}) , chat_room_id, 'response');
+                    }).catch(errorHandler);
+                }
+
+                function gotRemoteStream(event) {
+                    console.log('gotRemoteStream');
+                    remoteVideo.src = window.URL.createObjectURL(event.stream);
+                }
+            };
+
+            document.getElementById('join-room').onclick = function() {
+                var localVideo;
+                var remoteVideo;
+                chat_room_id = document.getElementById("room-id").value;
+                var peerConnection = new RTCPeerConnection(peerConnectionConfig);
+                peerConnection.onaddstream = gotRemoteStream;
+                peerConnection.onicecandidate = gotIceCandidate;
+
+
+                var constraints = {
+                    video: true
+                };
+
+                if(navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia(constraints).then(getUserMediaSuccess).catch(errorHandler);
+                } else {
+                    alert('Your browser does not support getUserMedia API');
+                }
+
+                function getUserMediaSuccess(stream) {
+                    localVideo.src = window.URL.createObjectURL(stream);
+                    peerConnection.onaddstream = gotRemoteStream;
+                    peerConnection.addStream(stream);
+                    peerConnection.createOffer().then(createdDescription).catch(errorHandler);
+
+                }
+
+
+                function gotIceCandidate(event) {
+                    if(event.candidate != null) {
+                        send_massage(JSON.stringify({'ice': event.candidate}) , chat_room_id, 'ice1');
+                    }
+                }
+
+
+                function errorHandler(error) {
+                    console.log(error);
+                }
+
+
+
+
+                var source = new EventSource("/stream?channel="+chat_room_id);
+                source.addEventListener('response', gotResponse);
+
+                function gotResponse(event) {
+                    console.log("gotResponse");
+                    var data = JSON.parse(event.data);
+                    data =  JSON.parse(data.message);
+                    peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                }
+
+                source.addEventListener('ice2', gotIce);
+                function gotIce(event) {
+                    console.log("gotIce");
+                    var data = JSON.parse(event.data);
+                    data =  JSON.parse(data.message);
+                    peerConnection.addIceCandidate(new RTCIceCandidate(data.ice)).catch(errorHandler);
+                }
+
+               function createdDescription(description) {
+                    console.log('got description');
+                    peerConnection.setLocalDescription(description).then(function() {
+                        send_massage(JSON.stringify({'sdp': peerConnection.localDescription}) , chat_room_id, 'request');
+                    }).catch(errorHandler);
+                }
+
+
+                function gotRemoteStream(event) {
+                    console.log('got remote stream');
+                    remoteVideo.src = window.URL.createObjectURL(event.stream);
+                }
+
+
+            };
+
+
+
+
+
+
+{#            var eventList = document.querySelector('ul');#}
+{#        document.getElementById('open-room').onclick = function() {#}
+{##}
+{##}
+{#            var xhr = new XMLHttpRequest();#}
+{#            xhr.onreadystatechange = function () {#}
+{#              if(this.readyState == 4 && this.status == 200){#}
+{##}
+{#                  var newElement = document.createElement("li");#}
+{#                  newElement.textContent = "message: " + this.responseText;#}
+{#                  eventList.appendChild(newElement);#}
+{##}
+{#              }#}
+{#            };#}
+{#            var userName = document.getElementById('room-id').value;#}
+{#            chat_room_id = userName;#}
+{#            var data = new FormData();#}
+{#            data.append('id', userName);#}
+{##}
+{##}
+{#            xhr.open("POST","/xhr",true);#}
+{#            xhr.send(data);#}
+{#        };#}
+{##}
+{##}
+{#            var source = new EventSource("{{ url_for('sse.stream') }}");#}
+{#            source.addEventListener('greeting', function(event) {#}
+{#                var data = JSON.parse(event.data);#}
+{#                if (data.room_id == chat_room_id){#}
+{#                    var newElement = document.createElement("li");#}
+{#                  newElement.textContent = "message: " + "one calling you";#}
+{#                  eventList.appendChild(newElement);#}
+{#                }#}
+{##}
+{##}
+{#            }, false);#}
+{##}
+{#            source.addEventListener('error', function(event) {#}
+{#                alert("Failed to connect to event stream. Is Redis running?");#}
+{#            }, false);#}
+{##}
+{##}
+{#            document.getElementById('join-room').onclick = function() {#}
+{#            var eventList = document.querySelector('ul');#}
+{##}
+{#            var xhr = new XMLHttpRequest();#}
+{#            xhr.onreadystatechange = function () {#}
+{#              if(this.readyState == 4 && this.status == 200){#}
+{##}
+{#                  var newElement = document.createElement("li");#}
+{#                  newElement.textContent = "message: " + this.responseText;#}
+{#                  eventList.appendChild(newElement);#}
+{##}
+{#              }#}
+{#            };#}
+{#            var userName = document.getElementById('room-id').value;#}
+{#            var data = new FormData();#}
+{#            data.append('id', userName);#}
+{##}
+{##}
+{#            xhr.open("POST","/joinxhr",true);#}
+{#            xhr.send(data);#}
+{#        };#}
+
+        </script>
+
+
+{#        <script type="text/javascript">#}
+{#        </script>#}
+    </body>
+</html>
